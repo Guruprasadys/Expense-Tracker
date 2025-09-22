@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Expense Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f9f9f9;
+    }
+    h1 {
+      text-align: center;
+    }
+    form {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    input, button {
+      padding: 8px;
+      margin: 5px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      background: white;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+    th {
+      background: #eee;
+    }
+    .total {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      text-align: right;
+    }
+    button {
+      cursor: pointer;
+      background: #ff4d4d;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 5px 10px;
+      margin: 0 2px;
+    }
+    button:hover {
+      background: #e60000;
+    }
+    .edit-btn {
+      background: #4CAF50;
+    }
+    .edit-btn:hover {
+      background: #2e7d32;
+    }
+  </style>
+</head>
+<body>
+  <h1>Expense Tracker</h1>
+
+  <!-- Form to add expense -->
+  <form id="expenseForm">
+    <input type="number" id="amount" placeholder="Amount" required>
+    <input type="text" id="category" placeholder="Category" required>
+    <input type="date" id="date" required>
+    <input type="text" id="note" placeholder="Note">
+    <button type="submit">Add Expense</button>
+  </form>
+
+  <!-- Expenses Table -->
+  <table id="expenseTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Amount</th>
+        <th>Category</th>
+        <th>Date</th>
+        <th>Note</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="total" id="totalExpense">Total: 0</div>
+
+  <script>
+    const API_URL = "http://127.0.0.1:5000/expenses";
+
+    // Fetch and display all expenses
+    async function fetchExpenses() {
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+
+        const tbody = document.querySelector("#expenseTable tbody");
+        tbody.innerHTML = "";
+
+        let total = 0;
+        data.forEach(exp => {
+          total += parseFloat(exp.amount);
+
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${exp.id}</td>
+            <td>${exp.amount}</td>
+            <td>${exp.category}</td>
+            <td>${exp.date}</td>
+            <td>${exp.note}</td>
+            <td>
+              <button class="edit-btn" onclick="editExpense(${exp.id})">Edit</button>
+              <button onclick="deleteExpense(${exp.id})">Delete</button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+
+        document.getElementById("totalExpense").textContent = "Total: " + total;
+      } catch (err) {
+        console.error("Error fetching expenses:", err);
+      }
+    }
+
+    // Add new expense
+    document.getElementById("expenseForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const newExpense = {
+        amount: document.getElementById("amount").value,
+        category: document.getElementById("category").value,
+        date: document.getElementById("date").value,
+        note: document.getElementById("note").value
+      };
+
+      try {
+        await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newExpense)
+        });
+
+        e.target.reset();
+        fetchExpenses(); // refresh table
+      } catch (err) {
+        console.error("Error adding expense:", err);
+      }
+    });
+
+    // Edit an expense
+    async function editExpense(id) {
+      const expense = {
+        amount: prompt("Enter new amount:"),
+        category: prompt("Enter new category:"),
+        date: prompt("Enter new date (YYYY-MM-DD):"),
+        note: prompt("Enter new note:")
+      };
+
+      if (expense.amount && expense.category && expense.date) {
+        try {
+          await fetch(`${API_URL}/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(expense)
+          });
+          fetchExpenses(); // refresh table
+        } catch (err) {
+          console.error("Error updating expense:", err);
+        }
+      }
+    }
+
+    // Delete expense
+    async function deleteExpense(id) {
+      try {
+        await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+        fetchExpenses(); // refresh table
+      } catch (err) {
+        console.error("Error deleting expense:", err);
+      }
+    }
+
+    // Initial load
+    fetchExpenses();
+  </script>
+</body>
+</html>
